@@ -275,8 +275,9 @@ function updateCamera(carPos, carQuat) {
     // Driver seat: slightly left, slightly lower so roof feels higher, forward in cabin
     offset = new THREE.Vector3(-0.4, 1.15, 0.1); 
   } else {
-    // Camera offset: slightly higher, further back for cinematic feel
-    offset = new THREE.Vector3(0, 3.2, 9.5);
+    // Camera offset: close chase cam, just above and behind the car
+    // (tuned to match slowroads.io's framing — car fills ~28% of frame width)
+    offset = new THREE.Vector3(0, 1.55, 4.3);
   }
   offset.applyQuaternion(carQuat);
   camTarget.copy(carPos).add(offset);
@@ -285,7 +286,14 @@ function updateCamera(carPos, carQuat) {
   if (G.cameraMode === 'FPP') {
     camPos.copy(camTarget); // Instant snap, no lag inside cabin
   } else {
-    camPos.lerp(camTarget, 0.08); // Smooth cinematic follow for TPP
+    // Frame-rate independent smoothing. An exponential follow has a steady-
+    // state lag of (carSpeed * tau) behind a constantly-moving target — at
+    // this game's ~80 units/s top speed, the old tau=0.2 meant the camera
+    // trailed ~16 units back while driving, even though it looked right
+    // sitting still. Small tau keeps that lag under ~1 unit at top speed
+    // (matches slowroads.io's tight, glued-to-the-car chase cam) while still
+    // smoothing out small bumps from road curvature.
+    camPos.lerp(camTarget, 1 - Math.exp(-G.delta / 0.015));
   }
 
   camera.position.copy(camPos);
