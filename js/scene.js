@@ -269,15 +269,25 @@ let camTarget = new THREE.Vector3();
 let camPos = new THREE.Vector3(0, 5, 12);
 let _camVel = new THREE.Vector3();
 
+// Chase offset is tuned against a 16:9-ish desktop frame. Vertical FOV is
+// fixed, so a narrow portrait phone screen gets a much narrower horizontal
+// FOV — the car (fixed real-world width) then eats most of the frame width.
+// Pulling the camera back on narrow aspects keeps the car's on-screen size
+// roughly consistent across desktop and phone portrait.
+const CHASE_REF_ASPECT = 16 / 9;
+function chaseDistanceScale(aspect) {
+  return Math.min(3.5, Math.max(1, CHASE_REF_ASPECT / aspect));
+}
+
 function updateCamera(carPos, carQuat) {
   let offset;
   if (G.cameraMode === 'FPP') {
     // Driver seat: slightly left, slightly lower so roof feels higher, forward in cabin
-    offset = new THREE.Vector3(-0.4, 1.15, 0.1); 
+    offset = new THREE.Vector3(-0.4, 1.15, 0.1);
   } else {
     // Camera offset: close chase cam, just above and behind the car
     // (tuned to match slowroads.io's framing — car fills ~28% of frame width)
-    offset = new THREE.Vector3(0, 1.55, 4.3);
+    offset = new THREE.Vector3(0, 1.55, 4.3).multiplyScalar(chaseDistanceScale(camera.aspect));
   }
   offset.applyQuaternion(carQuat);
   camTarget.copy(carPos).add(offset);
